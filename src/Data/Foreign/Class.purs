@@ -18,10 +18,11 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Monad.Except (Except, mapExcept)
 
+import Data.Maybe
 import Data.Array (range, zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, MultipleErrors, ForeignError(..), Prop(..), toForeign, parseJSON, readArray, readInt, readNumber, readBoolean, readChar, readString)
+import Data.Foreign (F, Foreign, MultipleErrors, ForeignError(..), Prop(..), toForeign, parseJSON, readArray, readInt, readNumber, readBoolean, readChar, readString, isNull)
 import Data.Foreign.Index (class Index, errorAt, (!))
 import Data.Foreign.Null (Null(..), readNull, writeNull)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined)
@@ -37,6 +38,11 @@ import Data.Traversable (sequence)
 -- | can be used to construct instances for new data structures.
 class IsForeign a where
   read :: Foreign -> F a
+
+instance maybeIsForeign :: (IsForeign a) => IsForeign (Maybe a) where
+  read f
+    | isNull f  = pure Nothing
+    | otherwise = (Just <$> read f) <|> (pure Nothing)
 
 instance foreignIsForeign :: IsForeign Foreign where
   read = pure
