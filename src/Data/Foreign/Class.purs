@@ -18,17 +18,17 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Monad.Except (Except, mapExcept)
 
-import Data.Maybe
 import Data.Array (range, zipWith, length)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Foreign (F, Foreign, MultipleErrors, ForeignError(..), Prop(..), toForeign, parseJSON, readArray, readInt, readNumber, readBoolean, readChar, readString, isNull)
+import Data.Foreign (F, Foreign, MultipleErrors, ForeignError(..), Prop(..), toForeign, parseJSON, readArray, readInt, readNumber, readBoolean, readChar, readString, isNull, fail)
 import Data.Foreign.Index (class Index, errorAt, (!))
 import Data.Foreign.Null (Null(..), readNull, writeNull)
 import Data.Foreign.NullOrUndefined (NullOrUndefined(..), readNullOrUndefined)
 import Data.Foreign.Undefined (Undefined(..), readUndefined, writeUndefined)
-import Data.Maybe (maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
 
 -- | A type class instance for this class can be written for a type if it
 -- | is possible to attempt to _safely_ coerce a `Foreign` value to that
@@ -43,6 +43,12 @@ instance maybeIsForeign :: (IsForeign a) => IsForeign (Maybe a) where
   read f
     | isNull f  = pure Nothing
     | otherwise = (Just <$> read f) <|> (pure Nothing)
+
+instance isForeignTuple :: (IsForeign a, IsForeign b) => IsForeign (Tuple a b) where
+  read f = readArray f >>= j
+    where
+    j [a,b] = Tuple <$> read a <*> read b
+    j _ = fail $ JSONError "Couldn't decode Tuple"
 
 instance foreignIsForeign :: IsForeign Foreign where
   read = pure
